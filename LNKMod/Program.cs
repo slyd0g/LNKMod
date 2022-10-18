@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Dynamic;
 using System.IO;
-using System.Linq;
 using ShellLink;
 using Newtonsoft.Json;
 
@@ -35,16 +31,18 @@ namespace LNKMod
             Console.WriteLine(Lnk);
         }
 
-        public static void CreateLNK(string path, string args, string iconpath, int iconindex)
+        public static void CreateLNK(string lnkPath, string path, string args, string iconpath, int iconindex)
         {
+            // Parse the working directory from the path
+            string workdir = Path.GetDirectoryName(path);
+
             Console.WriteLine("[+] Creating .LNK with arguments `{0} {1}'.", path, args);
+            Console.WriteLine("[+] With working directory of `{0}`.", workdir);
             Console.WriteLine("[+] Will reference icon at `{0}`.", iconpath);
-            Shortcut.CreateShortcut(path, args, iconpath, iconindex).WriteToFile(@"payload.lnk");
-            Console.WriteLine("[+] Payload written to 'payload.lnk'.", iconpath);
+            Shortcut.CreateShortcut(path, args, workdir, iconpath, iconindex).WriteToFile(lnkPath);
+            Console.WriteLine("[+] Payload written to '{0}'.", lnkPath);
 
             // Modifying access, write, creation times
-            string[] files = System.IO.Directory.GetFiles(System.AppDomain.CurrentDomain.BaseDirectory, "*.lnk");
-            string lnkPath = @files[0];
             Console.WriteLine("[+] Modifying lnkPath '{0}' with modified access/write/creation times", lnkPath);
             Shortcut Lnk = Shortcut.ReadFromFile(lnkPath);
             Lnk.AccessTime = DateTime.Now.ToFileTime();
@@ -73,8 +71,8 @@ namespace LNKMod
     - Modify path to executable and arguments
         - .\LNKMod.exe -modify -path C:\Windows\system32\cmd.exe -args /c notepad.exe
 - Create (will create payload.lnk in current directory, do not have any other .LNK in current directory!)
-    - Create .LNK with path to executable, no arguments, and path to icon
-        - .\LNKMod.exe -create -path C:\Windows\system32\calc.exe -icopath C:\Users\John\AppData\Local\Microsoft\OneDrive\OneDrive.exe
+    - Create Test.lnk with path to executable, no arguments, and path to icon
+        - .\LNKMod.exe -create -outputpath Test.lnk -path C:\Windows\system32\calc.exe -icopath C:\Users\John\AppData\Local\Microsoft\OneDrive\OneDrive.exe
     - Create .LNK with path to executable, arguments, and path to icon 
         - .\LNKMod.exe -create -path C:\Windows\system32\cmd.exe -args /c calc.exe -icopath C:\Users\John\AppData\Local\Microsoft\OneDrive\OneDrive.exe
     - Sets access/write time to current time and creation time to a (reasonable) random time
@@ -107,31 +105,92 @@ namespace LNKMod
             //  -icopath "C:\Users\John\AppData\Local\Microsoft\OneDrive\OneDrive.exe"
             else if (args[0] == "-create")
             {
-                string path = @args[2];
+                string arg;
+                string outputpath = String.Format("{0}{1}", System.AppDomain.CurrentDomain.BaseDirectory, "payload.lnk");
+                string path = "";
                 string cmdlineargs = "";
                 string iconpath = "";
                 int iconindex = 0;
 
-                // need to account for edge case where people don't want args
-                for (int i = 0; i < args.Length-1; i++)
+                // Parse arguments
+                // Path is required; args, icon path, and name are optional
+                try
                 {
-                    if (args[i].Contains("-args"))
+                    for (int i = 0; i < args.Length - 1; i++)
                     {
-                        cmdlineargs = @args[i+1];
+                        arg = args[i].ToUpper();
+                        switch (arg.ToUpper())
+                        {
+                            case "-ARGS":
+                            case "/ARGS":
+                                i++;
+                                try
+                                {
+                                    cmdlineargs = args[i];
+                                }
+                                catch (IndexOutOfRangeException)
+                                {
+                                    throw new ArgumentException("No args specified");
+                                }
+                                break;
+                            case "-ICOPATH":
+                            case "/ICOPATH":
+                                i++;
+                                try
+                                {
+                                    iconpath = args[i];
+                                }
+                                catch (IndexOutOfRangeException)
+                                {
+                                    throw new ArgumentException("No icon path specified");
+                                }
+                                break;
+                            case "-OUTPUTPATH":
+                            case "/OUTPUTPATH":
+                                i++;
+                                try
+                                {
+                                    outputpath = args[i];
+                                }
+                                catch (IndexOutOfRangeException)
+                                {
+                                    throw new ArgumentException("No output filepath specified");
+                                }
+                                break;
+                            case "-PATH":
+                            case "/PATH":
+                                i++;
+                                try
+                                {
+                                    path = args[i];
+                                }
+                                catch (IndexOutOfRangeException)
+                                {
+                                    throw new ArgumentException("No path specified");
+                                }
+                                break;
+                        }
                     }
-                    if (args[i].Contains("-icopath"))
+
+                    if (path.Length == 0)
                     {
-                        iconpath = @args[i + 1];
+                        throw new ArgumentException("No path specified");
                     }
                 }
-                CreateLNK(path, cmdlineargs, iconpath, iconindex);
+                catch (ArgumentException e)
+                {
+                    Console.Error.WriteLine("[-] ERROR: {0}", e.Message.Trim());
+                    return;
+                }
+
+                CreateLNK(outputpath, path, cmdlineargs, iconpath, iconindex);
             }
-            else if(args[0] == "-dump")
+            else if (args[0] == "-dump")
             {
                 string path = @args[1];
                 Console.WriteLine(Shortcut.ReadFromFile(path));
             }
-            else if(args[0] == "-dumpjson")
+            else if (args[0] == "-dumpjson")
             {
                 string path = @args[1];
                 Shortcut Lnk = Shortcut.ReadFromFile(path);

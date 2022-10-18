@@ -1,8 +1,8 @@
 # LNKMod
 
 ## Output File Names
-- Will update the .LNK you specify if using ```-modify```
-- Will create ```payload.lnk``` if using ```-create```
+- ```-modify``` will update the specified .LNK
+- ```-create``` will create ```payload.lnk``` in the current directory unless a custom path is specified using ```-outputpath```
 
 ## Usage / Test Cases
 - Modify (will modify .LNK in current directory, only place one!)
@@ -10,10 +10,10 @@
         -  ```.\LNKMod.exe -modify -path "C:\Windows\system32\calc.exe"```
     - Modify path to executable and arguments
         - ```.\LNKMod.exe -modify -path "C:\Windows\system32\cmd.exe" -args "/c notepad.exe"```
-- Create (will create ```payload.lnk``` in current directory, do not have any other .LNK in current directory!)
-    - Create .LNK with path to executable, no arguments, and path to icon
-        - ```.\LNKMod.exe -create -path "C:\Windows\system32\calc.exe" -icopath "C:\Users\John\AppData\Local\Microsoft\OneDrive\OneDrive.exe"```
-    - Create .LNK with path to executable, arguments, and path to icon 
+- Create
+    - Create Test.lnk in the parent directory with path to executable, no arguments, and path to icon
+        - ```.\LNKMod.exe -create -outputpath ..\Test.lnk -path "C:\Windows\system32\calc.exe" -icopath "C:\Users\John\AppData\Local\Microsoft\OneDrive\OneDrive.exe"```
+    - Create payload.lnk in the current directory with path to executable, arguments, and path to icon 
         - ```.\LNKMod.exe -create -path "C:\Windows\system32\cmd.exe" -args "/c calc.exe" -icopath "C:\Users\John\AppData\Local\Microsoft\OneDrive\OneDrive.exe"```
     - Sets access/write time to current time and creation time to a (reasonable) random time
 - Dump metadata for a specified .LNK
